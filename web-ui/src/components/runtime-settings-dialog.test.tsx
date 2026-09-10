@@ -171,6 +171,7 @@ const savedClineOauthConfig = {
 	selectedShortcutLabel: null,
 	agentAutonomousModeEnabled: true,
 	readyForReviewNotificationsEnabled: false,
+	worktreeSymlinkIgnoredPathsEnabled: true,
 	effectiveCommand: "cline",
 	detectedCommands: [],
 	shortcuts: [],

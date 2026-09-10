@@ -3,7 +3,6 @@
 // on state orchestration instead of transport plumbing.
 import { getRuntimeTrpcClient } from "@/runtime/trpc-client";
 import type {
-	RuntimeAgentId,
 	RuntimeClineAccountBalanceResponse,
 	RuntimeClineAccountOrganizationsResponse,
 	RuntimeClineAccountProfileResponse,
@@ -26,9 +25,9 @@ import type {
 	RuntimeClineReasoningEffort,
 	RuntimeClineUpdateProviderResponse,
 	RuntimeConfigResponse,
+	RuntimeConfigSaveRequest,
 	RuntimeDebugResetAllStateResponse,
 	RuntimeFeaturebaseTokenResponse,
-	RuntimeProjectShortcut,
 	RuntimeRunUpdateResponse,
 	RuntimeUpdateStatusResponse,
 } from "@/runtime/types";
@@ -40,15 +39,7 @@ export async function fetchRuntimeConfig(workspaceId: string | null): Promise<Ru
 
 export async function saveRuntimeConfig(
 	workspaceId: string | null,
-	nextConfig: {
-		selectedAgentId?: RuntimeAgentId;
-		selectedShortcutLabel?: string | null;
-		agentAutonomousModeEnabled?: boolean;
-		shortcuts?: RuntimeProjectShortcut[];
-		readyForReviewNotificationsEnabled?: boolean;
-		commitPromptTemplate?: string;
-		openPrPromptTemplate?: string;
-	},
+	nextConfig: RuntimeConfigSaveRequest,
 ): Promise<RuntimeConfigResponse> {
 	const trpcClient = getRuntimeTrpcClient(workspaceId);
 	return await trpcClient.runtime.saveConfig.mutate(nextConfig);

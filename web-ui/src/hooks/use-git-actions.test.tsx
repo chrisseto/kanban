@@ -85,6 +85,7 @@ function createRuntimeConfig(selectedAgentId: RuntimeConfigResponse["selectedAge
 		globalConfigPath: "/tmp/global-config.json",
 		projectConfigPath: "/tmp/project-config.json",
 		readyForReviewNotificationsEnabled: true,
+		worktreeSymlinkIgnoredPathsEnabled: true,
 		detectedCommands: [],
 		agents: [
 			{

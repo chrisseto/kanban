@@ -104,12 +104,14 @@ describe.sequential("runtime-config auto agent selection", () => {
 						selectedAgentId?: string;
 						agentAutonomousModeEnabled?: boolean;
 						readyForReviewNotificationsEnabled?: boolean;
+						worktreeSymlinkIgnoredPathsEnabled?: boolean;
 						commitPromptTemplate?: string;
 						openPrPromptTemplate?: string;
 					};
 					expect(persisted.selectedAgentId).toBe("codex");
 					expect(persisted.agentAutonomousModeEnabled).toBeUndefined();
 					expect(persisted.readyForReviewNotificationsEnabled).toBeUndefined();
+					expect(persisted.worktreeSymlinkIgnoredPathsEnabled).toBeUndefined();
 					expect(persisted.commitPromptTemplate).toBeUndefined();
 					expect(persisted.openPrPromptTemplate).toBeUndefined();
 
@@ -255,6 +257,7 @@ describe.sequential("runtime-config auto agent selection", () => {
 				JSON.stringify(
 					{
 						readyForReviewNotificationsEnabled: true,
+						worktreeSymlinkIgnoredPathsEnabled: true,
 					},
 					null,
 					2,
@@ -291,6 +294,7 @@ describe.sequential("runtime-config auto agent selection", () => {
 					selectedShortcutLabel: null,
 					agentAutonomousModeEnabled: true,
 					readyForReviewNotificationsEnabled: true,
+					worktreeSymlinkIgnoredPathsEnabled: true,
 					shortcuts: [],
 					commitPromptTemplate: current.commitPromptTemplateDefault,
 					openPrPromptTemplate: current.openPrPromptTemplateDefault,
@@ -302,12 +306,14 @@ describe.sequential("runtime-config auto agent selection", () => {
 					selectedAgentId?: string;
 					agentAutonomousModeEnabled?: boolean;
 					readyForReviewNotificationsEnabled?: boolean;
+					worktreeSymlinkIgnoredPathsEnabled?: boolean;
 					commitPromptTemplate?: string;
 					openPrPromptTemplate?: string;
 				};
 				expect(globalPayload.selectedAgentId).toBeUndefined();
 				expect(globalPayload.agentAutonomousModeEnabled).toBeUndefined();
 				expect(globalPayload.readyForReviewNotificationsEnabled).toBeUndefined();
+				expect(globalPayload.worktreeSymlinkIgnoredPathsEnabled).toBeUndefined();
 				expect(globalPayload.commitPromptTemplate).toBeUndefined();
 				expect(globalPayload.openPrPromptTemplate).toBeUndefined();
 				expect(existsSync(join(tempProject, ".cline", "kanban", "config.json"))).toBe(false);
@@ -336,6 +342,7 @@ describe.sequential("runtime-config auto agent selection", () => {
 					selectedShortcutLabel: null,
 					agentAutonomousModeEnabled: true,
 					readyForReviewNotificationsEnabled: true,
+					worktreeSymlinkIgnoredPathsEnabled: true,
 					shortcuts: [],
 					commitPromptTemplate: current.commitPromptTemplateDefault,
 					openPrPromptTemplate: current.openPrPromptTemplateDefault,
@@ -363,6 +370,7 @@ describe.sequential("runtime-config auto agent selection", () => {
 					selectedShortcutLabel: null,
 					agentAutonomousModeEnabled: true,
 					readyForReviewNotificationsEnabled: true,
+					worktreeSymlinkIgnoredPathsEnabled: true,
 					shortcuts: [{ label: "Ship", command: "npm run ship", icon: "rocket" }],
 					commitPromptTemplate: current.commitPromptTemplateDefault,
 					openPrPromptTemplate: current.openPrPromptTemplateDefault,
@@ -401,11 +409,13 @@ describe.sequential("runtime-config auto agent selection", () => {
 					selectedShortcutLabel?: string;
 					agentAutonomousModeEnabled?: boolean;
 					readyForReviewNotificationsEnabled?: boolean;
+					worktreeSymlinkIgnoredPathsEnabled?: boolean;
 				};
 				expect(globalPayload.selectedAgentId).toBe("codex");
 				expect(globalPayload.selectedShortcutLabel).toBeUndefined();
 				expect(globalPayload.agentAutonomousModeEnabled).toBeUndefined();
 				expect(globalPayload.readyForReviewNotificationsEnabled).toBeUndefined();
+				expect(globalPayload.worktreeSymlinkIgnoredPathsEnabled).toBeUndefined();
 			});
 		} finally {
 			cleanupProject();
@@ -435,6 +445,38 @@ describe.sequential("runtime-config auto agent selection", () => {
 
 				const reloaded = await loadRuntimeConfig(tempProject);
 				expect(reloaded.agentAutonomousModeEnabled).toBe(false);
+			});
+		} finally {
+			cleanupProject();
+			cleanupHome();
+		}
+	});
+
+	it("persists worktree ignored path symlinking when disabled", async () => {
+		const { path: tempHome, cleanup: cleanupHome } = createTempDir("kanban-home-runtime-config-symlink-disabled-");
+		const { path: tempProject, cleanup: cleanupProject } = createTempDir(
+			"kanban-project-runtime-config-symlink-disabled-",
+		);
+
+		try {
+			await withTemporaryEnv({ home: tempHome }, async () => {
+				const defaults = await loadRuntimeConfig(tempProject);
+				expect(defaults.worktreeSymlinkIgnoredPathsEnabled).toBe(true);
+
+				const updated = await updateRuntimeConfig(tempProject, {
+					worktreeSymlinkIgnoredPathsEnabled: false,
+				});
+				expect(updated.worktreeSymlinkIgnoredPathsEnabled).toBe(false);
+
+				const globalPayload = JSON.parse(
+					readFileSync(join(tempHome, ".cline", "kanban", "config.json"), "utf8"),
+				) as {
+					worktreeSymlinkIgnoredPathsEnabled?: boolean;
+				};
+				expect(globalPayload.worktreeSymlinkIgnoredPathsEnabled).toBe(false);
+
+				const reloaded = await loadRuntimeConfig(tempProject);
+				expect(reloaded.worktreeSymlinkIgnoredPathsEnabled).toBe(false);
 			});
 		} finally {
 			cleanupProject();

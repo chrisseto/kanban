@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { fetchRuntimeConfig, saveRuntimeConfig } from "@/runtime/runtime-config-query";
-import type { RuntimeAgentId, RuntimeConfigResponse, RuntimeProjectShortcut } from "@/runtime/types";
+import type { RuntimeConfigResponse, RuntimeConfigSaveRequest } from "@/runtime/types";
 import { useTrpcQuery } from "@/runtime/use-trpc-query";
 
 export interface UseRuntimeConfigResult {
@@ -9,15 +9,7 @@ export interface UseRuntimeConfigResult {
 	isLoading: boolean;
 	isSaving: boolean;
 	refresh: () => void;
-	save: (nextConfig: {
-		selectedAgentId?: RuntimeAgentId;
-		selectedShortcutLabel?: string | null;
-		agentAutonomousModeEnabled?: boolean;
-		shortcuts?: RuntimeProjectShortcut[];
-		readyForReviewNotificationsEnabled?: boolean;
-		commitPromptTemplate?: string;
-		openPrPromptTemplate?: string;
-	}) => Promise<RuntimeConfigResponse | null>;
+	save: (nextConfig: RuntimeConfigSaveRequest) => Promise<RuntimeConfigResponse | null>;
 }
 
 export function useRuntimeConfig(
@@ -76,15 +68,7 @@ export function useRuntimeConfig(
 	}, [configQuery.data, configQuery.error, configQuery.isError, configQuery.refetch, open, workspaceId]);
 
 	const save = useCallback(
-		async (nextConfig: {
-			selectedAgentId?: RuntimeAgentId;
-			selectedShortcutLabel?: string | null;
-			agentAutonomousModeEnabled?: boolean;
-			shortcuts?: RuntimeProjectShortcut[];
-			readyForReviewNotificationsEnabled?: boolean;
-			commitPromptTemplate?: string;
-			openPrPromptTemplate?: string;
-		}): Promise<RuntimeConfigResponse | null> => {
+		async (nextConfig: RuntimeConfigSaveRequest): Promise<RuntimeConfigResponse | null> => {
 			setIsSaving(true);
 			try {
 				const saved = await saveRuntimeConfig(workspaceId, nextConfig);

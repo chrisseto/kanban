@@ -156,6 +156,15 @@ In other words:
 
 So it is not arbitrary, but it is still a tradeoff.
 
+## Status
+
+Option 1 shipped as an opt-out rather than a removal: the global
+`worktreeSymlinkIgnoredPathsEnabled` setting (Settings -> Worktrees, persisted in
+`~/.cline/kanban/config.json`, default `true`) gates `syncIgnoredPathsIntoWorktree` in
+`src/workspace/task-worktree.ts`. Turning it off stops new symlinks and the managed
+`info/exclude` block; worktrees that already exist keep theirs. Options 2 and 3 below are
+still open for the default-on path.
+
 ## Product and architecture options
 
 ### Option 1: stop symlinking ignored paths entirely

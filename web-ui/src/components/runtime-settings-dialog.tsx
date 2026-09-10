@@ -16,6 +16,7 @@ import {
 	CircleDot,
 	ExternalLink,
 	FolderOpen,
+	GitBranch,
 	GitCommit,
 	Palette,
 	Plus,
@@ -94,7 +95,7 @@ export type RuntimeSettingsSection = "shortcuts";
 
 const SETTINGS_AGENT_ORDER: readonly RuntimeAgentId[] = ["cline", "claude", "codex", "droid", "kiro"];
 
-type SettingsNavId = "general" | "cline" | "git-prompts" | "notifications" | "appearance" | "project";
+type SettingsNavId = "general" | "cline" | "git-prompts" | "worktrees" | "notifications" | "appearance" | "project";
 
 const SETTINGS_NAV_ITEMS: ReadonlyArray<{
 	id: SettingsNavId;
@@ -105,6 +106,7 @@ const SETTINGS_NAV_ITEMS: ReadonlyArray<{
 	{ id: "general", label: "General", icon: <SlidersHorizontal size={16} /> },
 	{ id: "cline", label: "Cline", icon: <Bot size={16} />, clineOnly: true },
 	{ id: "git-prompts", label: "Git Prompts", icon: <GitCommit size={16} /> },
+	{ id: "worktrees", label: "Worktrees", icon: <GitBranch size={16} /> },
 	{ id: "notifications", label: "Notifications", icon: <Bell size={16} /> },
 	{ id: "appearance", label: "Appearance", icon: <Palette size={16} /> },
 	{ id: "project", label: "Project", icon: <FolderOpen size={16} /> },
@@ -369,6 +371,7 @@ export function RuntimeSettingsDialog({
 	const [selectedAgentId, setSelectedAgentId] = useState<RuntimeAgentId>("claude");
 	const [agentAutonomousModeEnabled, setAgentAutonomousModeEnabled] = useState(true);
 	const [readyForReviewNotificationsEnabled, setReadyForReviewNotificationsEnabled] = useState(true);
+	const [worktreeSymlinkIgnoredPathsEnabled, setWorktreeSymlinkIgnoredPathsEnabled] = useState(true);
 	const [initialThemeId, setInitialThemeId] = useState<ThemeId>(readStoredThemeId);
 	const [draftThemeId, setDraftThemeId] = useState<ThemeId>(readStoredThemeId);
 	const [notificationPermission, setNotificationPermission] = useState<BrowserNotificationPermission>("unsupported");
@@ -442,6 +445,7 @@ export function RuntimeSettingsDialog({
 	const initialSelectedAgentId = configuredAgentId ?? fallbackAgentId;
 	const initialAgentAutonomousModeEnabled = config?.agentAutonomousModeEnabled ?? true;
 	const initialReadyForReviewNotificationsEnabled = config?.readyForReviewNotificationsEnabled ?? true;
+	const initialWorktreeSymlinkIgnoredPathsEnabled = config?.worktreeSymlinkIgnoredPathsEnabled ?? true;
 	const initialShortcuts = config?.shortcuts ?? [];
 	const initialCommitPromptTemplate = config?.commitPromptTemplate ?? "";
 	const initialOpenPrPromptTemplate = config?.openPrPromptTemplate ?? "";
@@ -468,6 +472,9 @@ export function RuntimeSettingsDialog({
 			return true;
 		}
 		if (readyForReviewNotificationsEnabled !== initialReadyForReviewNotificationsEnabled) {
+			return true;
+		}
+		if (worktreeSymlinkIgnoredPathsEnabled !== initialWorktreeSymlinkIgnoredPathsEnabled) {
 			return true;
 		}
 		if (clineSettings.hasUnsavedChanges) {
@@ -506,10 +513,12 @@ export function RuntimeSettingsDialog({
 		initialSelectedAgentId,
 		initialShortcuts,
 		initialThemeId,
+		initialWorktreeSymlinkIgnoredPathsEnabled,
 		openPrPromptTemplate,
 		readyForReviewNotificationsEnabled,
 		selectedAgentId,
 		shortcuts,
+		worktreeSymlinkIgnoredPathsEnabled,
 	]);
 
 	useEffect(() => {
@@ -519,6 +528,7 @@ export function RuntimeSettingsDialog({
 		setSelectedAgentId(configuredAgentId ?? fallbackAgentId);
 		setAgentAutonomousModeEnabled(config?.agentAutonomousModeEnabled ?? true);
 		setReadyForReviewNotificationsEnabled(config?.readyForReviewNotificationsEnabled ?? true);
+		setWorktreeSymlinkIgnoredPathsEnabled(config?.worktreeSymlinkIgnoredPathsEnabled ?? true);
 		setShortcuts(config?.shortcuts ?? []);
 		setCommitPromptTemplate(config?.commitPromptTemplate ?? "");
 		setOpenPrPromptTemplate(config?.openPrPromptTemplate ?? "");
@@ -530,6 +540,7 @@ export function RuntimeSettingsDialog({
 		config?.readyForReviewNotificationsEnabled,
 		config?.selectedAgentId,
 		config?.shortcuts,
+		config?.worktreeSymlinkIgnoredPathsEnabled,
 		fallbackAgentId,
 		open,
 	]);
@@ -701,6 +712,7 @@ export function RuntimeSettingsDialog({
 			selectedAgentId,
 			agentAutonomousModeEnabled,
 			readyForReviewNotificationsEnabled,
+			worktreeSymlinkIgnoredPathsEnabled,
 			shortcuts,
 			commitPromptTemplate,
 			openPrPromptTemplate,
@@ -904,6 +916,33 @@ export function RuntimeSettingsDialog({
 								disabled={controlsDisabled}
 							/>{" "}
 							to reference {TASK_GIT_BASE_REF_PROMPT_VARIABLE.description}
+						</p>
+					</div>
+
+					{/* ---- Worktrees ---- */}
+					<div data-settings-section="worktrees" />
+					<div className="sticky top-0 -mx-5 px-5 pt-4 pb-2 bg-surface-1 z-10">
+						<h2 className="flex items-center gap-2 text-base font-semibold text-text-primary m-0">
+							<GitBranch size={16} className="text-text-secondary" />
+							Worktrees
+						</h2>
+					</div>
+					<div className="rounded-lg border border-border bg-surface-0 px-4 py-3 mb-4">
+						<div className="flex items-center gap-2">
+							<RadixSwitch.Root
+								checked={worktreeSymlinkIgnoredPathsEnabled}
+								disabled={controlsDisabled}
+								onCheckedChange={setWorktreeSymlinkIgnoredPathsEnabled}
+								className="relative h-5 w-9 rounded-full bg-surface-4 data-[state=checked]:bg-accent cursor-pointer disabled:opacity-40"
+							>
+								<RadixSwitch.Thumb className="block h-4 w-4 rounded-full bg-white shadow-sm transition-transform translate-x-0.5 data-[state=checked]:translate-x-[18px]" />
+							</RadixSwitch.Root>
+							<span className="text-[13px] text-text-primary">Symlink gitignored files into task worktrees</span>
+						</div>
+						<p className="text-text-secondary text-[13px] mt-2 mb-0">
+							Shares <code>node_modules</code>, <code>.env</code>, and build caches with the base repo so tasks
+							start ready to run. Turn off to give each task a clean worktree that needs its own install.
+							Worktrees that already exist keep their symlinks.
 						</p>
 					</div>
 

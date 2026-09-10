@@ -36,14 +36,14 @@ function runGit(cwd: string, args: string[]): string {
 	return result.stdout.trim();
 }
 
-async function withTemporaryHome<T>(run: () => Promise<T>): Promise<T> {
+async function withTemporaryHome<T>(run: (home: string) => Promise<T>): Promise<T> {
 	const { path: tempHome, cleanup } = createTempDir("kanban-home-");
 	const previousHome = process.env.HOME;
 	const previousUserProfile = process.env.USERPROFILE;
 	process.env.HOME = tempHome;
 	process.env.USERPROFILE = tempHome;
 	try {
-		return await run();
+		return await run(tempHome);
 	} finally {
 		if (previousHome === undefined) {
 			delete process.env.HOME;
@@ -190,6 +190,57 @@ describe.sequential("task-worktree integration", () => {
 				if (existsSync(nodeModulesPath)) {
 					expect(runGit(ensured.path, ["check-ignore", "-v", "node_modules"])).toContain("info/exclude");
 				}
+			} finally {
+				cleanup();
+			}
+		});
+	});
+
+	it("skips symlinking ignored paths when the worktree symlink setting is disabled", async () => {
+		await withTemporaryHome(async (tempHome) => {
+			const { path: sandboxRoot, cleanup } = createTempDir("kanban-task-worktree-symlink-disabled-");
+			try {
+				const repoPath = join(sandboxRoot, "repo");
+				mkdirSync(repoPath, { recursive: true });
+
+				runGit(repoPath, ["init"]);
+				runGit(repoPath, ["config", "user.name", "Kanban Test"]);
+				runGit(repoPath, ["config", "user.email", "kanban-test@example.com"]);
+
+				writeFileSync(join(repoPath, "README.md"), "hello\n", "utf8");
+				writeFileSync(join(repoPath, ".gitignore"), "/.next/\n/node_modules/\n", "utf8");
+				mkdirSync(join(repoPath, ".next"), { recursive: true });
+				mkdirSync(join(repoPath, "node_modules"), { recursive: true });
+				writeFileSync(join(repoPath, ".next", "BUILD_ID"), "build\n", "utf8");
+				writeFileSync(join(repoPath, "node_modules", "package.json"), '{\n  "name": "fixture"\n}\n', "utf8");
+
+				runGit(repoPath, ["add", "README.md", ".gitignore"]);
+				runGit(repoPath, ["commit", "-m", "init"]);
+
+				const configDir = join(tempHome, ".cline", "kanban");
+				mkdirSync(configDir, { recursive: true });
+				writeFileSync(
+					join(configDir, "config.json"),
+					`${JSON.stringify({ worktreeSymlinkIgnoredPathsEnabled: false })}\n`,
+					"utf8",
+				);
+
+				const ensured = await ensureTaskWorktreeIfDoesntExist({
+					cwd: repoPath,
+					taskId: "task-symlink-disabled",
+					baseRef: "HEAD",
+				});
+				expect(ensured.ok).toBe(true);
+				if (!ensured.ok || !ensured.path) {
+					throw new Error("Task worktree was not created");
+				}
+
+				expect(existsSync(join(ensured.path, ".next"))).toBe(false);
+				expect(existsSync(join(ensured.path, "node_modules"))).toBe(false);
+
+				const excludePath = join(runGit(repoPath, ["rev-parse", "--absolute-git-dir"]), "info", "exclude");
+				const excludeContent = existsSync(excludePath) ? readFileSync(excludePath, "utf8") : "";
+				expect(excludeContent).not.toContain("kanban-managed-symlinked-ignored-paths");
 			} finally {
 				cleanup();
 			}

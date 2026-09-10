@@ -1,6 +1,7 @@
 import { access, lstat, mkdir, readdir, readFile, rm, symlink } from "node:fs/promises";
 import { dirname, isAbsolute, join } from "node:path";
 
+import { loadGlobalRuntimeConfig } from "../config/runtime-config";
 import type {
 	RuntimeTaskWorkspaceInfoResponse,
 	RuntimeWorktreeDeleteResponse,
@@ -356,6 +357,11 @@ async function syncManagedIgnoredPathExcludes(repoPath: string, relativePaths: s
 }
 
 async function syncIgnoredPathsIntoWorktree(repoPath: string, worktreePath: string): Promise<void> {
+	const runtimeConfig = await loadGlobalRuntimeConfig();
+	if (!runtimeConfig.worktreeSymlinkIgnoredPathsEnabled) {
+		return;
+	}
+
 	const ignoredPaths = getUniquePaths(await listIgnoredPaths(repoPath)).filter(
 		(relativePath) => !shouldSkipSymlink(relativePath),
 	);
