@@ -11,6 +11,7 @@ const workspaceChangesMocks = vi.hoisted(() => ({
 	getWorkspaceChanges: vi.fn(),
 	getWorkspaceChangesBetweenRefs: vi.fn(),
 	getWorkspaceChangesFromRef: vi.fn(),
+	getWorkspaceChangesSinceBaseRef: vi.fn(),
 }));
 
 vi.mock("../../../src/workspace/task-worktree.js", () => ({
@@ -25,6 +26,7 @@ vi.mock("../../../src/workspace/get-workspace-changes.js", () => ({
 	getWorkspaceChanges: workspaceChangesMocks.getWorkspaceChanges,
 	getWorkspaceChangesBetweenRefs: workspaceChangesMocks.getWorkspaceChangesBetweenRefs,
 	getWorkspaceChangesFromRef: workspaceChangesMocks.getWorkspaceChangesFromRef,
+	getWorkspaceChangesSinceBaseRef: workspaceChangesMocks.getWorkspaceChangesSinceBaseRef,
 }));
 
 import { createWorkspaceApi } from "../../../src/trpc/workspace-api";
@@ -64,12 +66,14 @@ describe("createWorkspaceApi loadChanges", () => {
 		workspaceChangesMocks.getWorkspaceChanges.mockReset();
 		workspaceChangesMocks.getWorkspaceChangesBetweenRefs.mockReset();
 		workspaceChangesMocks.getWorkspaceChangesFromRef.mockReset();
+		workspaceChangesMocks.getWorkspaceChangesSinceBaseRef.mockReset();
 
 		workspaceTaskWorktreeMocks.resolveTaskCwd.mockResolvedValue("/tmp/worktree");
 		workspaceChangesMocks.createEmptyWorkspaceChangesResponse.mockResolvedValue(createChangesResponse());
 		workspaceChangesMocks.getWorkspaceChanges.mockResolvedValue(createChangesResponse());
 		workspaceChangesMocks.getWorkspaceChangesBetweenRefs.mockResolvedValue(createChangesResponse());
 		workspaceChangesMocks.getWorkspaceChangesFromRef.mockResolvedValue(createChangesResponse());
+		workspaceChangesMocks.getWorkspaceChangesSinceBaseRef.mockResolvedValue(createChangesResponse());
 	});
 
 	it("shows the completed turn diff while awaiting review", async () => {
@@ -292,6 +296,34 @@ describe("createWorkspaceApi loadChanges", () => {
 		});
 	});
 
+	it("diffs the whole task session from its base ref in working copy mode", async () => {
+		const api = createWorkspaceApi({
+			ensureTerminalManagerForWorkspace: vi.fn(),
+			getScopedClineTaskSessionService: vi.fn(),
+			broadcastRuntimeWorkspaceStateUpdated: vi.fn(),
+			broadcastRuntimeProjectsUpdated: vi.fn(),
+			buildWorkspaceStateSnapshot: vi.fn(),
+		});
+
+		await api.loadChanges(
+			{
+				workspaceId: "workspace-1",
+				workspacePath: "/tmp/repo",
+			},
+			{
+				taskId: "task-1",
+				baseRef: "main",
+				mode: "working_copy",
+			},
+		);
+
+		expect(workspaceChangesMocks.getWorkspaceChangesSinceBaseRef).toHaveBeenCalledWith({
+			cwd: "/tmp/worktree",
+			baseRef: "main",
+		});
+		expect(workspaceChangesMocks.getWorkspaceChanges).not.toHaveBeenCalled();
+	});
+
 	it("returns an empty diff when the task worktree does not exist yet", async () => {
 		workspaceTaskWorktreeMocks.resolveTaskCwd.mockRejectedValue(
 			new Error('Task worktree not found for task "task-1".'),
@@ -322,6 +354,6 @@ describe("createWorkspaceApi loadChanges", () => {
 
 		expect(response).toBe(emptyResponse);
 		expect(workspaceChangesMocks.createEmptyWorkspaceChangesResponse).toHaveBeenCalledWith("/tmp/repo");
-		expect(workspaceChangesMocks.getWorkspaceChanges).not.toHaveBeenCalled();
+		expect(workspaceChangesMocks.getWorkspaceChangesSinceBaseRef).not.toHaveBeenCalled();
 	});
 });
